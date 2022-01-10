@@ -1,6 +1,9 @@
 import express, { response } from "express";
 import mongodb, { MongoClient } from "mongodb";
-
+import jsonwebtoken from "jsonwebtoken";
+import  jwt  from "jsonwebtoken";
+import verify from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import cors from "cors"
 import dotenv from "dotenv"
 const app = express()
@@ -17,8 +20,115 @@ async function createconnections() {
 }
 app.use(express.json())
 app.use(cors())
+
+
+
+const validateToken = async (req, res, next) => {
+
+   try {
+     const token = req.header("access-token");
+     if (!token) return res.status(403).send("Access denied.");
+ 
+     const decoded = await jwt.verify(token,"SECRET");
+     req.user = decoded;
+     next();
+ } catch (error) {
+     res.status(400).send("Invalid token");
+ }
+   };
+ 
+
+
+//registration
+app.post("/register" , async (request,response)=>{
+   const client= await createconnections()
+  
+  const {name , email , username , password ,icon} = request.body;
+
+  const result1 = await client.db("gymDatabase").collection("userdata").findOne({username:username})
+  if(!result1)
+  {
+   const salt = await bcrypt.genSalt(10)
+   const hashpass =await bcrypt.hash(password,salt)
+   
+   const result = await client.db("gymDatabase").collection("userdata").insertOne({name , email , username , hashpass , icon})
+   console.log(result)
+   response.send("registration successful")
+  }
+  else{
+      response.send("user already exists")
+  }
+
+})
+
+
+
+
+
+
+
+//login code
+app.post("/login" , async(request,response)=>{
+   const client= await createconnections()
+  
+  const{username,password} = request.body;
+  
+  const result = await client.db("gymDatabase").collection("userdata").findOne({username:username})
+
+const username_send = result.username
+const usericon = result.icon
+
+  if(!result) 
+  {
+      response.send("user not exist")
+  }
+  else
+  {
+  const hash = result.hashpass
+ 
+  const ispasswordmatch = await bcrypt.compare(password,hash)
+
+   if(!ispasswordmatch){
+       response.send("username and password not match")
+   }
+   else{
+ 
+
+       const accessToken =  await jwt.sign(
+           { id: result.username },
+           "SECRET",
+           {
+             expiresIn: "2h"
+           }
+         );
+       response.json({messege:"valid logged in",token:accessToken,username_send,usericon})
+
+       
+
+   }
+}
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //chest data collection
-app.get("/chestdata", async (request, response) => {
+app.get("/chestdata",validateToken, async (request, response) => {
    const client = await createconnections();
    const result = await client.db("gymDatabase").collection("data").find({}).toArray();
    response.header("Access-Control-Allow-Origin","*")
