@@ -49,8 +49,9 @@ app.post("/register" , async (request,response)=>{
   if(!result1)
   {
    const salt = await bcrypt.genSalt(10)
+   console.log("salt" + salt)
    const hashpass =await bcrypt.hash(password,salt)
-   
+   console.log("hashpass"+hashpass)
    const result = await client.db("gymDatabase").collection("userdata").insertOne({name , email , username , hashpass , icon})
    console.log(result)
    response.send("registration successful")
@@ -86,7 +87,8 @@ const usericon = result.icon
   {
   const hash = result.hashpass
  
-  const ispasswordmatch = await bcrypt.compare(password,hash)
+  const ispasswordmatch = await bcrypt.compare(password,hash)//send true or false
+  console.log("ispassmatch"+ispasswordmatch)
 
    if(!ispasswordmatch){
        response.send("username and password not match")
@@ -101,6 +103,7 @@ const usericon = result.icon
              expiresIn: "2h"
            }
          );
+         console.log("accesstokem"+accessToken)
        response.json({messege:"valid logged in",token:accessToken,username_send,usericon})
 
        
@@ -111,25 +114,14 @@ const usericon = result.icon
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //chest data collection
-app.get("/chestdata",validateToken, async (request, response) => {
+
+
+
+
+app.get("/chestdata", async (request, response) => {
    const client = await createconnections();
+   console.log(client)
    const result = await client.db("gymDatabase").collection("data").find({}).toArray();
    response.header("Access-Control-Allow-Origin","*")
    response.header("Access-Control-Allow-Headers","Origin,X-Requested-With,Content-Type,Accept")
